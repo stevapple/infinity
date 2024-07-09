@@ -13,7 +13,7 @@
 # libevent-2.1.12-stable.tar.gz
 # lz4-1.9.4.tar.gz
 
-FROM opencloudos/opencloudos:9.0
+FROM opencloudos/opencloudos9-init
 
 RUN dnf -y upgrade \
     && dnf -y install git make wget which vim file gcc-c++ \
@@ -48,24 +48,25 @@ RUN --mount=type=bind,source=gcc-13.2.0.tar.xz,target=/root/gcc-13.2.0.tar.xz \
 
 ENV LIBRARY_PATH=/usr/local/lib:/usr/local/lib64
 
-# Install cmake-3.29.0
-RUN --mount=type=bind,source=cmake-3.29.0-linux-x86_64.tar.gz,target=/root/cmake-3.29.0-linux-x86_64.tar.gz \
-    cd /root && tar xf cmake-3.29.0-linux-x86_64.tar.gz \
-    && cp -rf cmake-3.29.0-linux-x86_64/bin/* /usr/local/bin \
-    && cp -rf cmake-3.29.0-linux-x86_64/share/* /usr/local/share \
-    && rm -rf cmake-3.29.0-linux-x86_64
+# Install cmake-3.29.3
+RUN --mount=type=bind,source=cmake-3.29.3-linux-x86_64.tar.gz,target=/root/cmake-3.29.3-linux-x86_64.tar.gz \
+    --mount=type=bind,source=cmake-3.29.3-linux-aarch64.tar.gz,target=/root/cmake-3.29.3-linux-aarch64.tar.gz \
+    cd /root && tar xf cmake-3.29.3-linux-$(arch).tar.gz \
+    && cp -rf cmake-3.29.3-linux-$(arch)/bin/* /usr/local/bin \
+    && cp -rf cmake-3.29.3-linux-$(arch)/share/* /usr/local/share \
+    && rm -rf cmake-3.29.3-linux-*
 
 # Install ninja-1.12.1
 RUN --mount=type=bind,source=ninja-linux.zip,target=/root/ninja-linux.zip \
     cd /root && unzip ninja-linux.zip \
     && cp ninja /usr/local/bin && rm ninja
 
-# Install clang-17.0.6
+# Install clang-18.1.8
 # Add -DCLANG_DEFAULT_LINKER=lld to use lld by default
 # infinity seems to be incompatible with the lld linker
-RUN --mount=type=bind,source=llvm-project-17.0.6.src.tar.xz,target=/root/llvm-project-17.0.6.src.tar.xz \
-    cd /root && tar xf llvm-project-17.0.6.src.tar.xz \
-    && cd llvm-project-17.0.6.src && mkdir build && cd build \
+RUN --mount=type=bind,source=llvm-project-18.1.8.src.tar.xz,target=/root/llvm-project-18.1.8.src.tar.xz \
+    cd /root && tar xf llvm-project-18.1.8.src.tar.xz \
+    && cd llvm-project-18.1.8.src && mkdir build && cd build \
     && cmake -G Ninja -DCMAKE_BUILD_TYPE=Release \
         -DCMAKE_JOB_POOLS:STRING=link_pool=1 \
         -DCMAKE_JOB_POOL_LINK:STRING=link_pool \
@@ -75,7 +76,7 @@ RUN --mount=type=bind,source=llvm-project-17.0.6.src.tar.xz,target=/root/llvm-pr
         -DLLVM_INSTALL_TOOLCHAIN_ONLY=ON \
         -DLLVM_TARGETS_TO_BUILD=X86 ../llvm \
     && ninja -j12 install/strip \
-    && ldconfig && cd /root && rm -rf llvm-project-17.0.6.src
+    && ldconfig && cd /root && rm -rf llvm-project-18.1.8.src
 
 # Install boost-1.81.0
 RUN --mount=type=bind,source=boost_1_81_0.tar.bz2,target=/root/boost_1_81_0.tar.bz2 \
@@ -90,12 +91,6 @@ RUN --mount=type=bind,source=flex-2.6.4.tar.gz,target=/root/flex-2.6.4.tar.gz  \
     && cd flex-2.6.4 && ./autogen.sh && ./configure \
     && make -j && make install \
     && ldconfig && cd /root && rm -rf flex-2.6.4
-
-# Install liburing-2.5
-RUN --mount=type=bind,source=liburing-2.5.tar.gz,target=/root/liburing-2.5.tar.gz  \
-    cd /root && tar xf liburing-2.5.tar.gz \
-    && cd liburing-liburing-2.5 && make -j install \
-    && ldconfig && cd /root && rm -rf liburing-liburing-2.5
 
 # Install libevent-2.1.12
 RUN --mount=type=bind,source=libevent-2.1.12-stable.tar.gz,target=/root/libevent-2.1.12-stable.tar.gz  \
@@ -125,6 +120,13 @@ RUN --mount=type=bind,source=jemalloc-5.3.0.tar.bz2,target=/root/jemalloc-5.3.0.
     cd /root && tar xjf jemalloc-5.3.0.tar.bz2 \
     && cd jemalloc-5.3.0 && CFLAGS="-fPIE" CXXFLAGS="-fPIE" ./configure --enable-static --disable-libdl --enable-prof --enable-prof-libunwind && make -j install \
     && ldconfig && cd /root && rm -rf jemalloc-5.3.0
+
+
+# # Install liburing-2.5
+# RUN --mount=type=bind,source=liburing-2.5.tar.gz,target=/root/liburing-2.5.tar.gz  \
+#     cd /root && tar xf liburing-2.5.tar.gz \
+#     && cd liburing-liburing-2.5 && make -j install \
+#     && ldconfig && cd /root && rm -rf liburing-liburing-2.5
 
 ENV CC=clang CXX=clang++ LZ4_ROOT=/usr/local
 
